@@ -1,0 +1,147 @@
+Imports Microsoft.VisualBasic.Logging
+Imports System.IO
+Imports System.Math
+Imports System.Windows.Forms.VisualStyles.VisualStyleElement.ToolBar
+
+Public Class count
+    Private Sub LoginForm_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        ' 判断关闭原因是否为用户单击关闭按钮
+        If e.CloseReason = CloseReason.UserClosing Then
+            ' 如果是，退出整个应用程序
+            Application.Exit()
+        End If
+    End Sub
+
+
+    Private Sub txtStressRange_KeyPress(sender As Object, e As KeyPressEventArgs) Handles txtStressRange.KeyPress
+        If e.KeyChar = ChrW(Keys.Return) Then ' 如果按下的是回车键
+            e.Handled = True ' 防止出现“叮咚”声
+            Me.SelectNextControl(txtStressRange, True, True, True, True) ' 跳转到下一个控件（即TextBox2）
+        End If
+    End Sub
+    Private Sub txtMeanStress_KeyPress(sender As Object, e As KeyPressEventArgs) Handles txtMeanStress.KeyPress
+        If e.KeyChar = ChrW(Keys.Return) Then ' 如果按下的是回车键
+            e.Handled = True ' 防止出现“叮咚”声
+            Me.SelectNextControl(txtMeanStress, True, True, True, True) ' 跳转到下一个控件（即TextBox2）
+        End If
+    End Sub
+    Private Sub txtCyclesToFailure_KeyPress(sender As Object, e As KeyPressEventArgs) Handles txtCyclesToFailure.KeyPress
+        If e.KeyChar = ChrW(Keys.Return) Then ' 如果按下的是回车键
+            e.Handled = True ' 防止出现“叮咚”声
+            Me.SelectNextControl(txtCyclesToFailure, True, True, True, True) ' 跳转到下一个控件（即TextBox2）
+        End If
+    End Sub
+    Private Sub txtEnduranceLimit_KeyPress(sender As Object, e As KeyPressEventArgs) Handles txtEnduranceLimit.KeyPress
+        If e.KeyChar = ChrW(Keys.Return) Then ' 如果按下的是回车键
+            e.Handled = True ' 防止出现“叮咚”声
+            Me.SelectNextControl(txtEnduranceLimit, True, True, True, True) ' 跳转到下一个控件（即TextBox2）
+        End If
+    End Sub
+    Private Sub txtFatigueStrengthExponent_KeyDown(sender As Object, e As KeyEventArgs) Handles txtFatigueStrengthExponent.KeyDown
+        If e.KeyCode = Keys.Enter Then
+            btnCalculate.PerformClick()
+        End If
+    End Sub
+
+    Private Sub btnCalculate_Click_1(sender As Object, e As EventArgs) Handles btnCalculate.Click
+
+        ' 输入变量
+        Dim stressRange As Double '= CDbl(txtStressRange.Text) ' 应力幅值，单位MPa
+        If Double.TryParse(Me.txtStressRange.Text, stressRange) Then
+            ' 转换成功，可以继续使用stressRange变量
+        Else
+            ' 转换失败，提示用户输入正确的数字格式
+            MessageBox.Show("请输入正确的应力幅值")
+        End If
+
+        Dim meanStress As Double '= CDbl(txtMeanStress.Text) ' 平均应力，单位MPa
+        If Double.TryParse(Me.txtMeanStress.Text, meanStress) Then
+            ' 转换成功，可以继续使用stressRange变量
+        Else
+            ' 转换失败，提示用户输入正确的数字格式
+            MessageBox.Show("请输入正确的平均应力")
+        End If
+
+        Dim cyclesToFailure As Double '= CDbl(txtCyclesToFailure.Text)' 失效循环数
+        If Double.TryParse(Me.txtCyclesToFailure.Text, cyclesToFailure) Then
+            ' 转换成功，可以继续使用stressRange变量
+        Else
+            ' 转换失败，提示用户输入正确的数字格式
+            MessageBox.Show("请输入正确的失效循环数")
+        End If
+
+        ' 材料参数
+        Dim enduranceLimit As Double '= CDbl(txtEnduranceLimit.Text)' 耐久极限，单位MPa
+        If Double.TryParse(Me.txtEnduranceLimit.Text, enduranceLimit) Then
+            ' 转换成功，可以继续使用stressRange变量
+        Else
+            ' 转换失败，提示用户输入正确的数字格式
+            MessageBox.Show("请输入正确的耐久极限")
+        End If
+
+        Dim fatigueStrengthExponent As Double '= CDbl(txtFatigueStrengthExponent.Text) ' 疲劳强度指数
+        If Double.TryParse(Me.txtFatigueStrengthExponent.Text, fatigueStrengthExponent) Then
+            ' 转换成功，可以继续使用stressRange变量
+        Else
+            ' 转换失败，提示用户输入正确的数字格式
+            MessageBox.Show("请输入正确的疲劳强度指数")
+        End If
+
+        ' 计算疲劳寿命
+        Dim fatigueLife As Double
+        If meanStress >= 0 Then ' 当平均应力为正时，使用Soderberg准则
+            fatigueLife = (enduranceLimit / stressRange) ^ (1 / fatigueStrengthExponent) + (meanStress / stressRange)
+        Else ' 当平均应力为负时，使用Goodman准则
+            fatigueLife = (enduranceLimit / stressRange) ^ (1 / fatigueStrengthExponent) * (1 + Abs(meanStress) / stressRange)
+        End If
+        txtFatigueLife.Text = fatigueLife '.ToString("#,##0.00") & "  循环"
+
+        ' 创建位图并设置画笔
+        Dim bm As New Bitmap(PictureBox1.Width, PictureBox1.Height)
+        Dim g As Graphics = Graphics.FromImage(bm)
+        'Dim p As New Pen(Color.Blue, 2)
+
+        ' 定义绘图区域
+        Dim rect As RectangleF = New RectangleF(-300, -300, 300, 300)
+
+        ' 绘制坐标轴
+        Dim pen As Pen = New Pen(Color.Black, 2)
+        g.DrawLine(pen, rect.Left, rect.Bottom, rect.Right, rect.Bottom) ' x轴
+        g.DrawLine(pen, rect.Left, rect.Bottom, rect.Left, rect.Top) ' y轴
+
+        ' 绘制疲劳寿命曲线
+        Dim stressValues(100) As Double
+        Dim cycleValues(100) As Double
+        Dim n As Integer = 0
+        For i = 1 To 100
+            Dim stressRatio As Double = i / 100
+            Dim stressValue As Double = StressRange * stressRatio + MeanStress
+            stressValues(i) = stressValue
+            Dim cycleValue As Double
+            If MeanStress >= 0 Then ' 当平均应力为正时，使用Soderberg准则
+                cycleValue = (EnduranceLimit / stressValue) ^ (1 / FatigueStrengthExponent) + (MeanStress / stressValue)
+            Else ' 当平均应力为负时，使用Goodman准则
+                cycleValue = (EnduranceLimit / stressValue) ^ (1 / FatigueStrengthExponent) * (1 + Abs(MeanStress) / stressValue)
+            End If
+            cycleValues(i) = cycleValue
+            n = i
+            If cycleValue > CyclesToFailure Then Exit For ' 当疲劳寿命大于失效循环数时，停止计算
+        Next
+        Array.Resize(stressValues, n)
+        Array.Resize(cycleValues, n)
+
+        Dim x1 As Single = rect.Left
+        Dim y1 As Single = rect.Bottom
+        Dim x2 As Single = rect.Left + CSng((StressRange + MeanStress - stressValues(0)) / (stressValues(n - 1) - stressValues(0))) * rect.Width
+        Dim y2 As Single = rect.Top + CSng((CyclesToFailure - cycleValues(0)) / (cycleValues(n - 1) - cycleValues(0))) * rect.Height
+        pen = New Pen(Color.Blue, 2)
+        g.DrawLine(pen, x1, y1, x2, y2)
+
+        ' 绘制坐标轴标签
+        Dim font As Font = New Font("宋体", 10)
+        g.DrawString("应力", font, Brushes.Black, rect.Right, rect.Bottom + 10)
+        g.DrawString("循环次数", font, Brushes.Black, rect.Left - 40, rect.Top - 20)
+
+
+    End Sub
+End Class
